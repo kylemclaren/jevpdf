@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
-import { INPUT_TOKEN_PRICE_USD, NEAR_MISS_FLOOR } from "@/lib/jev-config"
+import { INPUT_TOKEN_PRICE_USD } from "@/lib/jev-config"
 import { SAMPLE_FILE_NAME, SAMPLE_QUERIES } from "@/lib/sample"
 import type { Result } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -581,14 +581,17 @@ function ResultRow({
             <span className="tabular-nums">Page {result.page}</span>
             {mode === "meaning" && (
               <span
-                className="relative h-1 w-10 overflow-hidden rounded-full bg-muted"
+                className="relative h-1 w-16 overflow-hidden rounded-full bg-muted"
                 title={`Jev confidence ${result.score.toFixed(2)}`}
               >
                 <span
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{
                     width: `${Math.round(result.score * 100)}%`,
-                    background: heat(result.score),
+                    // The gradient spans the whole track, so a longer bar
+                    // reaches further into the hot end.
+                    backgroundImage: HEAT_GRADIENT,
+                    backgroundSize: `${100 / Math.max(result.score, 0.01)}% 100%`,
                   }}
                 />
               </span>
@@ -611,17 +614,15 @@ function ResultRow({
   )
 }
 
-/**
- * "Hotness" of a hit: pale yellow for a lukewarm score through amber and
- * orange to red-orange for a near-certain one. Near misses (below the hit
- * threshold) stay at the cool end.
- */
-function heat(score: number) {
-  const t = Math.min(1, Math.max(0, (score - NEAR_MISS_FLOOR) / (1 - NEAR_MISS_FLOOR)))
-  const eased = t * t // spend most of the range on the strong hits
-  const hue = 100 - 72 * eased // 100 yellow → 28 red-orange
-  const chroma = 0.08 + 0.12 * eased
-  const lightness = 0.86 - 0.2 * eased
+/** Cool to hot along the confidence track: pale yellow → amber → red-orange. */
+const HEAT_GRADIENT = `linear-gradient(90deg, ${[0, 0.4, 0.6, 0.8, 1]
+  .map((t) => heat(t))
+  .join(", ")})`
+
+function heat(t: number) {
+  const hue = 100 - 72 * t // 100 yellow → 28 red-orange
+  const chroma = 0.07 + 0.13 * t
+  const lightness = 0.88 - 0.22 * t
   return `oklch(${lightness} ${chroma} ${hue})`
 }
 
