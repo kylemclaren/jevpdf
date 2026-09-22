@@ -581,7 +581,7 @@ function ResultRow({
             <span className="whitespace-nowrap tabular-nums">Page {result.page}</span>
             {mode === "meaning" && (
               <span
-                className="relative h-1 w-16 overflow-hidden rounded-full bg-muted md:w-24"
+                className="relative h-1 w-20 overflow-hidden rounded-full bg-muted md:w-40"
                 title={`Jev confidence ${result.score.toFixed(2)}`}
               >
                 <span
