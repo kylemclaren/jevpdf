@@ -7,14 +7,25 @@ import {
   FileUpIcon,
   MonitorIcon,
   MoonIcon,
+  PencilIcon,
   SearchIcon,
+  SearchXIcon,
   SquareIcon,
   SunIcon,
+  TextSearchIcon,
   XIcon,
 } from "lucide-react"
 
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
@@ -215,16 +226,22 @@ export function SearchPanel({
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto border-t">
-        {run?.status === "done" && results.length === 0 && near.length === 0 && (
-          <div className="px-5 py-8 text-center">
-            <p className="font-heading text-[15px]">
-              Nothing here seems to answer that.
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Try different words, or switch to Exact text.
-            </p>
-          </div>
-        )}
+        {ready && results.length === 0 && near.length === 0 &&
+          ((mode === "meaning" && run?.status === "done") ||
+            (mode === "exact" && query.trim())) && (
+            <NoMatches
+              mode={mode}
+              query={mode === "meaning" ? run!.query : query}
+              spans={run?.total}
+              onRephrase={() => {
+                inputRef.current?.focus()
+                inputRef.current?.select()
+              }}
+              onSwitch={() =>
+                jev.setMode(mode === "meaning" ? "exact" : "meaning")
+              }
+            />
+          )}
         {results.length > 0 && (
           <ol className="px-2 py-2">
             {results.map((r, i) => (
@@ -369,6 +386,57 @@ function GitHubMark({ className }: { className?: string }) {
   )
 }
 
+function NoMatches({
+  mode,
+  query,
+  spans,
+  onRephrase,
+  onSwitch,
+}: {
+  mode: "meaning" | "exact"
+  query: string
+  spans?: number
+  onRephrase: () => void
+  onSwitch: () => void
+}) {
+  const meaning = mode === "meaning"
+  return (
+    <Empty className="py-10">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          {meaning ? <SearchXIcon /> : <TextSearchIcon />}
+        </EmptyMedia>
+        <EmptyTitle className="font-heading text-base">
+          {meaning ? "No clear answer in this PDF" : "Those words aren't on any page"}
+        </EmptyTitle>
+        <EmptyDescription>
+          {meaning ? (
+            <>
+              Jev read {spans ? `all ${spans.toLocaleString()} lines` : "every line"}{" "}
+              and none answer <q className="text-foreground">{query.trim()}</q>.
+              Try other words, or search for a phrase you expect to see.
+            </>
+          ) : (
+            <>
+              No page contains <q className="text-foreground">{query.trim()}</q>.
+              Ask by meaning to find it in other words.
+            </>
+          )}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent className="flex-row justify-center gap-2">
+        <Button variant="outline" size="sm" onClick={onRephrase}>
+          <PencilIcon data-icon="inline-start" />
+          Rephrase
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onSwitch}>
+          {meaning ? "Try exact text" : "Ask by meaning"}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  )
+}
+
 function Status({ jev }: { jev: Jev }) {
   const { phase, mode, run, results, query } = jev
   let content: React.ReactNode = null
@@ -393,7 +461,7 @@ function Status({ jev }: { jev: Jev }) {
   } else if (phase.kind === "error") {
     content = <p className="text-sm text-destructive">{phase.message}</p>
   } else if (phase.kind === "ready" && mode === "exact" && query.trim()) {
-    content = <Line>{n === 0 ? "No exact matches. Try Meaning." : matches}</Line>
+    content = n > 0 ? <Line>{matches}</Line> : null
   } else if (phase.kind === "ready" && run) {
     if (run.status === "running") {
       content = (
@@ -407,7 +475,7 @@ function Status({ jev }: { jev: Jev }) {
     } else if (run.status === "done") {
       content = (
         <Line>
-          {n === 0 ? "No clear matches" : matches} ·{" "}
+          {n > 0 && `${matches} · `}
           {run.total.toLocaleString()} spans checked
           {run.failedBatches > 0 && (
             <span className="text-destructive">
