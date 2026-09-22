@@ -1,21 +1,41 @@
-# React + TypeScript + Vite + shadcn/ui
+# JevPDF
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+Open a PDF, say what you're looking for, and watch the matching lines light up. It works like Ctrl+F when you don't know the exact words. Extract once, then keep asking. No embeddings, no vector index, no chat answers.
 
-## Adding components
+## Run
 
-To add components to your app, run the following command:
-
-```bash
-npx shadcn@latest add button
+```sh
+bun install
+cp .env.example .env.local   # add TYPESAFE_API_KEY
+bun run dev                  # http://localhost:5173
 ```
 
-This will place the ui components in the `src/components` directory.
+Click **Try the sample report** and ask one of the suggested questions.
 
-## Using components
+## Using it
 
-To use the components in your app, import them as follows:
+- **Meaning** (default): type a question and press Enter. Matches light up as Jev answers. Press Enter again for the next match, Shift+Enter for the previous one.
+- **Exact text**: matches update as you type.
+- `/` or ⌘F focuses search. Esc stops a search or clears the box. Click a highlight on the page to select it.
+- If nothing clears the threshold, the closest lines are shown instead.
 
-```tsx
-import { Button } from "@/components/ui/button"
-```
+## How it works
+
+1. **Extract (local).** pdf.js reads each page's text runs and groups them into lines with rects (`src/lib/extract.ts`). The result is cached in IndexedDB by the file's SHA-256. Page numbers are 1-based on the original PDF.
+2. **Exact text.** Local, case- and whitespace-insensitive match that can cross line breaks, with character-level rects (`src/lib/exact.ts`).
+3. **Meaning.** Each line gets one Jev noul question: "does this line answer the query?" (`src/lib/jev.ts`). A batch shares one state (the query plus the page text as context) and asks up to 16 self-contained questions, each carrying its own line text. Highlights paint as batches return. Lines at or above `HIT_THRESHOLD` are hits, ranked by noul. Nouls are cached per file hash and query.
+4. Jev only receives text, never PDF bytes.
+
+All thresholds, budgets, and the question wording live in `src/lib/jev-config.ts`.
+
+## Jev rules followed
+
+- Text-only state; one narrow noul per span.
+- Requests are checked against the 64k / 32k (state + longest question) token limits.
+- A running search is cancelled when the query or mode changes.
+- Exponential backoff with jitter on 429/529/5xx, honouring `Retry-After`.
+- The API key stays on the server: `/api/jev` is a Vite middleware (`server/typesafe-proxy.ts`, for both `dev` and `preview`) that adds the Bearer header. `.env.local` is gitignored.
+
+## Sample
+
+`public/sample/tallwood-annual-report-2025.pdf` is a fictional four-page annual report, regenerated with `bun scripts/make-sample.ts`. Its wording deliberately avoids the demo queries' exact phrasing.
