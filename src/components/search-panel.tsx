@@ -249,7 +249,7 @@ export function SearchPanel({
             />
           )}
         {results.length > 0 && (
-          <ol className="px-2 py-2">
+          <ol className="flex flex-col gap-1 px-2 py-2">
             {results.map((r, i) => (
               <ResultRow
                 key={r.id}
@@ -269,7 +269,7 @@ export function SearchPanel({
             <p className="px-3 pb-1 text-xs text-muted-foreground">
               Closest lines, though none clearly answer it
             </p>
-            <ol className="opacity-75">
+            <ol className="flex flex-col gap-1 opacity-75">
               {near.map((r) => (
                 <ResultRow
                   key={r.id}
@@ -560,8 +560,8 @@ function ResultRow({
         }}
         className={cn(
           "flex w-full cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-left transition-colors outline-none",
-          "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50",
-          active && "bg-accent"
+          "focus-visible:ring-2 focus-visible:ring-ring/50",
+          active ? "bg-accent" : "hover:bg-accent/50"
         )}
       >
         {rank !== undefined && (
