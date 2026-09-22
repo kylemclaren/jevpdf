@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
-import { INPUT_TOKEN_PRICE_USD } from "@/lib/jev-config"
+import { INPUT_TOKEN_PRICE_USD, NEAR_MISS_FLOOR } from "@/lib/jev-config"
 import { SAMPLE_FILE_NAME, SAMPLE_QUERIES } from "@/lib/sample"
 import type { Result } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -585,8 +585,11 @@ function ResultRow({
                 title={`Jev confidence ${result.score.toFixed(2)}`}
               >
                 <span
-                  className="absolute inset-y-0 left-0 rounded-full bg-mark-strong"
-                  style={{ width: `${Math.round(result.score * 100)}%` }}
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    width: `${Math.round(result.score * 100)}%`,
+                    background: heat(result.score),
+                  }}
                 />
               </span>
             )}
@@ -606,6 +609,20 @@ function ResultRow({
       </div>
     </li>
   )
+}
+
+/**
+ * "Hotness" of a hit: pale yellow for a lukewarm score through amber and
+ * orange to red-orange for a near-certain one. Near misses (below the hit
+ * threshold) stay at the cool end.
+ */
+function heat(score: number) {
+  const t = Math.min(1, Math.max(0, (score - NEAR_MISS_FLOOR) / (1 - NEAR_MISS_FLOOR)))
+  const eased = t * t // spend most of the range on the strong hits
+  const hue = 100 - 72 * eased // 100 yellow → 28 red-orange
+  const chroma = 0.08 + 0.12 * eased
+  const lightness = 0.86 - 0.2 * eased
+  return `oklch(${lightness} ${chroma} ${hue})`
 }
 
 function Emphasis({ text, needle }: { text: string; needle: string }) {
