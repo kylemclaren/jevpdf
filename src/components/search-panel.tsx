@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
-import { INPUT_TOKEN_PRICE_USD } from "@/lib/jev-config"
+import { INPUT_TOKEN_PRICE_USD, NEAR_MISS_FLOOR } from "@/lib/jev-config"
 import { SAMPLE_FILE_NAME, SAMPLE_QUERIES } from "@/lib/sample"
 import type { Result } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -578,20 +578,20 @@ function ResultRow({
             )}
           </p>
           <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="tabular-nums">Page {result.page}</span>
+            <span className="whitespace-nowrap tabular-nums">Page {result.page}</span>
             {mode === "meaning" && (
               <span
-                className="relative h-1 w-16 overflow-hidden rounded-full bg-muted"
+                className="relative h-1 w-16 overflow-hidden rounded-full bg-muted md:w-24"
                 title={`Jev confidence ${result.score.toFixed(2)}`}
               >
                 <span
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{
-                    width: `${Math.round(result.score * 100)}%`,
+                    width: `${heatFill(result.score) * 100}%`,
                     // The gradient spans the whole track, so a longer bar
                     // reaches further into the hot end.
                     backgroundImage: HEAT_GRADIENT,
-                    backgroundSize: `${100 / Math.max(result.score, 0.01)}% 100%`,
+                    backgroundSize: `${100 / heatFill(result.score)}% 100%`,
                   }}
                 />
               </span>
@@ -612,6 +612,16 @@ function ResultRow({
       </div>
     </li>
   )
+}
+
+/**
+ * How much of the confidence track a score fills. The track starts at the
+ * near-miss floor, not 0, so hits (0.55+) spread across the bar instead of
+ * bunching at its end.
+ */
+function heatFill(score: number) {
+  const t = (score - NEAR_MISS_FLOOR) / (1 - NEAR_MISS_FLOOR)
+  return Math.min(1, Math.max(0.04, t))
 }
 
 /** Cool to hot along the confidence track: pale yellow → amber → red-orange. */
