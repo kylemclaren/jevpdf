@@ -306,25 +306,49 @@ function ThemeToggle() {
 /** Theme, what the current search cost, and the repo link. */
 function Footer({ run }: { run: Jev["run"] }) {
   const u = run?.usage
+  const cost = u ? u.inputTokens * INPUT_TOKEN_PRICE_USD : 0
   const fromCache = run?.status === "done" && u?.requests === 0
+
   return (
-    <footer className="flex items-center gap-1 border-t py-1.5 pr-3 pl-2">
+    <footer className="grid grid-cols-[2rem_1fr_2rem] items-center border-t px-2 py-1.5">
       <ThemeToggle />
-      {u && (
-        <span
-          className="px-2 text-xs text-muted-foreground tabular-nums"
-          title="TypeSafe cost of this search"
-        >
-          {fromCache ? "$0 · cached" : formatUsd(u.inputTokens * INPUT_TOKEN_PRICE_USD)}
-        </span>
-      )}
+      <div className="text-center text-xs text-muted-foreground tabular-nums">
+        {u ? (
+          <span title="TypeSafe cost of this search (input tokens; output is free)">
+            {fromCache ? (
+              "Cached · no cost"
+            ) : (
+              <>
+                Search cost{" "}
+                <span
+                  className={cn(
+                    "text-foreground",
+                    run?.status === "running" && "animate-pulse"
+                  )}
+                >
+                  {run?.status === "running" && cost === 0 ? "…" : formatUsd(cost)}
+                </span>
+              </>
+            )}
+          </span>
+        ) : (
+          <a
+            href="https://typesafe.ai"
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
+            Powered by TypeSafe Jev
+          </a>
+        )}
+      </div>
       <a
         href="https://github.com/kylemclaren/jevpdf"
         target="_blank"
         rel="noreferrer"
         aria-label="Source on GitHub"
         title="kylemclaren/jevpdf on GitHub"
-        className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="inline-flex size-7 items-center justify-center justify-self-end rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <GitHubMark className="size-3.5" />
       </a>
