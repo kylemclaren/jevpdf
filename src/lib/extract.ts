@@ -5,9 +5,15 @@ import { cacheGet, cacheSet } from "@/lib/cache"
 import type { Extraction, PageText, Rect, Segment, Span } from "@/lib/types"
 
 /** Bump when the extraction shape or line-grouping rules change. */
-const EXTRACTION_VERSION = 1
+const EXTRACTION_VERSION = 2
 
-type Placed = { text: string; rect: Rect; baseline: number; size: number }
+type Placed = {
+  text: string
+  rect: Rect
+  baseline: number
+  size: number
+  font?: string
+}
 
 /**
  * Local text extraction, cached by file hash. Only this text (never the PDF
@@ -50,7 +56,10 @@ async function extractPage(
   for (const item of content.items) {
     if (!("str" in item) || item.str.length === 0) continue
     const rect = itemRect(item, viewport)
-    if (rect) placed.push({ text: item.str, ...rect })
+    if (rect) {
+      const font = content.styles[item.fontName]?.fontFamily
+      placed.push({ text: item.str, font, ...rect })
+    }
   }
   page.cleanup()
 
@@ -113,7 +122,12 @@ function groupLines(items: Placed[], page: number): Span[] {
           gap > item.size * 0.12 && !/\s$/.test(text) && !/^\s/.test(item.text)
         if (needsSpace) text += " "
       }
-      segments.push({ start: text.length, text: item.text, rect: item.rect })
+      segments.push({
+        start: text.length,
+        text: item.text,
+        rect: item.rect,
+        font: item.font,
+      })
       text += item.text
       prev = item
     }

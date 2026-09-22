@@ -5,15 +5,20 @@ import {
   ArrowRightIcon,
   ArrowUpRightIcon,
   FileUpIcon,
+  MonitorIcon,
+  MoonIcon,
   SearchIcon,
   SquareIcon,
+  SunIcon,
   XIcon,
 } from "lucide-react"
 
+import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
+import { INPUT_TOKEN_PRICE_USD } from "@/lib/jev-config"
 import { SAMPLE_FILE_NAME, SAMPLE_QUERIES } from "@/lib/sample"
 import type { Result } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -267,19 +272,69 @@ export function SearchPanel({
         </p>
       )}
 
-      <footer className="flex items-center justify-end border-t px-5 py-2.5">
-        <a
-          href="https://github.com/kylemclaren/jevpdf"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <GitHubMark className="size-3.5" />
-          kylemclaren/jevpdf
-        </a>
-      </footer>
+      <Footer run={run} />
     </aside>
   )
+}
+
+const THEMES = [
+  { value: "system", label: "System theme", Icon: MonitorIcon },
+  { value: "light", label: "Light theme", Icon: SunIcon },
+  { value: "dark", label: "Dark theme", Icon: MoonIcon },
+] as const
+
+/** One button that cycles system → light → dark. */
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  const i = Math.max(0, THEMES.findIndex((t) => t.value === theme))
+  const { label, Icon } = THEMES[i]
+  const next = THEMES[(i + 1) % THEMES.length]
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="text-muted-foreground"
+      aria-label={`${label}. Switch to ${next.label.toLowerCase()}`}
+      title={`${label} (click for ${next.label.toLowerCase()})`}
+      onClick={() => setTheme(next.value)}
+    >
+      <Icon />
+    </Button>
+  )
+}
+
+/** Theme, what the current search cost, and the repo link. */
+function Footer({ run }: { run: Jev["run"] }) {
+  const u = run?.usage
+  const fromCache = run?.status === "done" && u?.requests === 0
+  return (
+    <footer className="flex items-center gap-1 border-t py-1.5 pr-3 pl-2">
+      <ThemeToggle />
+      {u && (
+        <span
+          className="px-2 text-xs text-muted-foreground tabular-nums"
+          title="TypeSafe cost of this search"
+        >
+          {fromCache ? "$0 · cached" : formatUsd(u.inputTokens * INPUT_TOKEN_PRICE_USD)}
+        </span>
+      )}
+      <a
+        href="https://github.com/kylemclaren/jevpdf"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Source on GitHub"
+        title="kylemclaren/jevpdf on GitHub"
+        className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <GitHubMark className="size-3.5" />
+      </a>
+    </footer>
+  )
+}
+
+function formatUsd(n: number) {
+  if (n === 0) return "$0"
+  return n < 0.0001 ? "<$0.0001" : `$${n.toFixed(4)}`
 }
 
 function GitHubMark({ className }: { className?: string }) {

@@ -2,7 +2,13 @@
 export type Rect = { x: number; y: number; w: number; h: number }
 
 /** A run of text drawn in one go; `start` is its offset within the span's text. */
-export type Segment = { start: number; text: string; rect: Rect }
+export type Segment = {
+  start: number
+  text: string
+  rect: Rect
+  /** CSS font family pdf.js reports for this run ("serif", "sans-serif", …). */
+  font?: string
+}
 
 /** One visual line of text on a page. This is the unit Jev judges. */
 export type Span = {

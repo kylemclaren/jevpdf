@@ -3,8 +3,11 @@ import { HIT_THRESHOLD, NEAR_MISS_FLOOR, NEAR_MISS_LIMIT } from "@/lib/jev-confi
 import type { Nouls } from "@/lib/jev"
 import type { Extraction, PageText, Rect, Result, Span } from "@/lib/types"
 
-/** Lines a highlight may run on past its hit to finish the sentence. */
+/** Lines a highlight may extend, before or after its hit, to cover the sentence. */
 const MAX_SENTENCE_TAIL_LINES = 2
+
+/** A sentence-ending . ? or !, but not an initial or abbreviation like "U.S.". */
+const SENTENCE_END = /(?<!\b[A-Z]|\b[A-Z]\.[A-Z])[.?!](?=\s|$)/g
 
 /**
  * Turn per-line nouls into ranked results. Adjacent hit lines that read as
@@ -50,12 +53,27 @@ function toResult(page: PageText, run: Span[], nouls: Nouls): Result {
   const rects: Rect[] = run.flatMap(spanRects)
   const text = run.map((s) => s.text.trim())
 
+  // Start the sentence on earlier lines, from just after the previous stop.
+  let first = run[0]
+  for (let k = 0; k < MAX_SENTENCE_TAIL_LINES; k++) {
+    const prev = page.spans[first.index - 1]
+    if (!prev || !continues(prev, first)) break
+    const stops = [...prev.text.matchAll(SENTENCE_END)]
+    const lastStop = stops[stops.length - 1]
+    let start = lastStop ? lastStop.index + 1 : 0
+    while (prev.text[start] === " ") start++
+    rects.unshift(...mergeLine(rangeRects(prev, start, prev.text.length)))
+    text.unshift(prev.text.slice(start).trim())
+    if (lastStop) break
+    first = prev
+  }
+
   // Finish the sentence onto following lines, up to its full stop.
   let last = run[run.length - 1]
   for (let k = 0; k < MAX_SENTENCE_TAIL_LINES; k++) {
     const next = page.spans[last.index + 1]
     if (!next || !continues(last, next)) break
-    const stop = next.text.search(/[.?!](\s|$)/)
+    const stop = next.text.search(SENTENCE_END)
     const end = stop >= 0 ? stop + 1 : next.text.length
     rects.push(...mergeLine(rangeRects(next, 0, end)))
     text.push(next.text.slice(0, end).trim())
@@ -87,14 +105,28 @@ function mergeLine(rects: Rect[]): Rect[] {
 }
 
 /**
- * Does `line`'s sentence wrap onto `next`? Wrapped prose has no terminal
- * punctuation and resumes in lowercase or mid-number (a date, a figure);
- * table rows and headings start with a capitalised label.
+ * Does `line`'s sentence wrap onto `next`? Wrapped prose sits at normal
+ * leading (no paragraph gap) with no terminal punctuation, and either ends
+ * mid-phrase (a word or comma) or resumes in lowercase or mid-number. Table
+ * rows end in figures; headings and rows are spaced wider than body leading.
  */
 function continues(line: Span, next: Span) {
+  if (next.index !== line.index + 1) return false
+  const a = bounds(line)
+  const b = bounds(next)
+  const paragraphGap = b.top - a.bottom > 0.5 * (a.bottom - a.top)
+  const end = line.text.trim()
   return (
-    next.index === line.index + 1 &&
-    !/[.?!:;]$/.test(line.text.trim()) &&
-    /^[a-z0-9]/.test(next.text.trim())
+    !paragraphGap &&
+    !/[.?!:;]$/.test(end) &&
+    (/[a-z,]$/.test(end) || /^[a-z0-9]/.test(next.text.trim()))
   )
+}
+
+function bounds(span: Span) {
+  const rects = span.segments.map((s) => s.rect)
+  return {
+    top: Math.min(...rects.map((r) => r.y)),
+    bottom: Math.max(...rects.map((r) => r.y + r.h)),
+  }
 }

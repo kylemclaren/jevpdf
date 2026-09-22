@@ -5,6 +5,9 @@
 
 export const JEV_MODEL = "jev-latest"
 
+/** USD per input token (docs.typesafe.ai/models: $0.042 / M input; output free). */
+export const INPUT_TOKEN_PRICE_USD = 0.042 / 1_000_000
+
 /** A span is a hit when Jev's noul (P(yes)) is at or above this. */
 export const HIT_THRESHOLD = 0.55
 

@@ -112,10 +112,14 @@ export function buildRequest(batch: Batch, query: string) {
 
 type NoulResponse = {
   answers: Record<string, { type: "noul"; noul: number }>
+  usage?: { input_tokens: number; output_tokens: number }
 }
 
+/** What TypeSafe reported for one request (output tokens are free). */
+export type BatchMeta = { inputTokens: number }
+
 export type JevEvents = {
-  onBatch: (nouls: Nouls, batch: Batch) => void
+  onBatch: (nouls: Nouls, batch: Batch, meta: BatchMeta) => void
   onBatchStart?: (batch: Batch) => void
   onRetry?: (status: number, delayMs: number) => void
   onBatchError?: (batch: Batch, error: unknown) => void
@@ -152,6 +156,7 @@ export async function runMeaningSearch(
       events.onBatchStart?.(batch)
       try {
         const res = await askBatch(batch, query, signal, events.onRetry)
+        const meta: BatchMeta = { inputTokens: res.usage?.input_tokens ?? 0 }
         const got: Nouls = {}
         for (const i of batch.ask) {
           const answer = res.answers[`line_${i}`]
@@ -159,7 +164,7 @@ export async function runMeaningSearch(
         }
         Object.assign(nouls, got)
         void cacheSet(key, nouls)
-        events.onBatch(got, batch)
+        events.onBatch(got, batch, meta)
       } catch (err) {
         if (signal.aborted) return
         if (err instanceof JevFatalError) {

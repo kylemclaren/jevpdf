@@ -25,6 +25,8 @@ export type MeaningRun = {
   failedBatches: number
   retrying: boolean
   error?: string
+  /** Summed over this run's TypeSafe requests (0 requests = all cached). */
+  usage: { requests: number; inputTokens: number }
 }
 
 export function useJevPdf() {
@@ -132,6 +134,7 @@ export function useJevPdf() {
         nouls: {},
         failedBatches: 0,
         retrying: false,
+        usage: { requests: 0, inputTokens: 0 },
       })
       // Check staleness when the update is queued, not inside the updater:
       // React runs updaters later, after `finally` below has cleared the ref.
@@ -156,13 +159,17 @@ export function useJevPdf() {
           controller.signal,
           {
             onBatchStart: (b) => bump(b.page, 1),
-            onBatch: (got, b) => {
+            onBatch: (got, b, meta) => {
               bump(b.page, -1)
               live((r) => ({
                 ...r,
                 retrying: false,
                 checked: r.checked + Object.keys(got).length,
                 nouls: { ...r.nouls, ...got },
+                usage: {
+                  requests: r.usage.requests + 1,
+                  inputTokens: r.usage.inputTokens + meta.inputTokens,
+                },
               }))
             },
             onBatchError: (b) => bump(b.page, -1),
