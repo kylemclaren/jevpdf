@@ -83,7 +83,7 @@ export function SearchPanel({
   return (
     <aside className={cn("flex min-h-0 flex-col bg-background", className)}>
       {jev.file && (
-        <header className="flex items-center justify-between gap-3 px-5 pt-5 pb-4">
+        <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
           <div className="min-w-0">
             <p className="truncate font-heading text-[15px] leading-tight">
               {jev.file.name.replace(/\.pdf$/i, "")}
@@ -95,7 +95,13 @@ export function SearchPanel({
               </p>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={onPickFile}>
+          {/* Pulled into the gutter so its edge lines up with the search box. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-mt-1 -mr-2.5 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={onPickFile}
+          >
             <FileUpIcon data-icon="inline-start" />
             Open
           </Button>
