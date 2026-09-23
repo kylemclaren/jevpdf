@@ -34,7 +34,14 @@
   <sub>▶ <a href=".github/demo.mp4">Watch the full-quality video</a></sub>
 </p>
 
-Extract once, then keep asking. No embeddings, no vector index, no chat answers.
+## Powered by Jev
+
+JevPDF is built on **[Jev](https://docs.typesafe.ai)**, [TypeSafe](https://typesafe.ai)'s flagship System One model. Jev doesn't write prose. It answers typed questions with structured values your code can use directly, and that's exactly what search needs.
+
+- **A yes/no for every line.** Each line of the PDF becomes one [noul](https://docs.typesafe.ai/primitives): *does this line answer the query?* Jev returns a probability from 0 to 1. The app ranks by that number, so there's no prompt parsing and no answer text to hallucinate.
+- **Many questions in one pass.** Jev scores all the questions in a request in parallel, each on its own, against the same shared page text. Adding questions barely changes response time, so JevPDF sends 16 lines per request and keeps 16 requests in flight. Highlights stream in page by page.
+- **Cheap enough to ask about every line.** Jev costs $0.042 per million input tokens, and output is free. Checking every line of a 15-page paper costs well under a cent.
+- **Nothing to build first.** No embeddings, no vector index, no chunking strategy. Extract the text once, then keep asking.
 
 ## Run
 
