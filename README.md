@@ -1,10 +1,40 @@
-![JevPDF: ask a PDF in your own words and watch the answer light up](.github/header.png)
+<p align="center">
+  <img src=".github/header.png" alt="JevPDF: ask a PDF in your own words and watch the answer light up">
+</p>
 
-# JevPDF
+<h1 align="center">JevPDF</h1>
 
-**Live: [jevpdf.fly.dev](https://jevpdf.fly.dev)**
+<p align="center">
+  <b>Ctrl+F for when you don't know the exact words.</b><br>
+  Ask a PDF in your own words and watch the matching lines light up.
+</p>
 
-Open a PDF, say what you're looking for, and watch the matching lines light up. It works like Ctrl+F when you don't know the exact words. Extract once, then keep asking. No embeddings, no vector index, no chat answers.
+<p align="center">
+  <a href="https://jevpdf.fly.dev"><img alt="Live demo" src="https://img.shields.io/badge/live-jevpdf.fly.dev-ff5a79?style=for-the-badge&logo=flydotio&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <img alt="Bun" src="https://img.shields.io/badge/Bun-000?logo=bun&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React_19-20232a?logo=react&logoColor=61dafb">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white">
+  <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_4-0f172a?logo=tailwindcss&logoColor=38bdf8">
+  <img alt="pdf.js" src="https://img.shields.io/badge/pdf.js-e44d26?logo=mozilla&logoColor=white">
+  <img alt="Deployed on Fly.io" src="https://img.shields.io/badge/Fly.io-7b3fe4?logo=flydotio&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="#run">Run</a> ·
+  <a href="#using-it">Using it</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#deploy-flyio">Deploy</a>
+</p>
+
+<p align="center">
+  <a href=".github/demo.mp4"><img src=".github/demo.gif" alt="JevPDF demo: asking the Attention Is All You Need paper a question and watching matches light up" width="720"></a><br>
+  <sub>▶ <a href=".github/demo.mp4">Watch the full-quality video</a></sub>
+</p>
+
+Extract once, then keep asking. No embeddings, no vector index, no chat answers.
 
 ## Run
 
