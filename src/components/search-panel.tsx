@@ -29,6 +29,14 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
 import { maskApiKey } from "@/lib/api-key"
@@ -540,10 +548,20 @@ function Status({ jev }: { jev: Jev }) {
     }
   } else if (phase.kind === "ready" && mode === "meaning" && jev.needsKey) {
     content = (
-      <Line>
-        Meaning search uses your TypeSafe API key.{" "}
-        <KeyLink onClick={jev.openKeyDialog}>Add key</KeyLink>
-      </Line>
+      <Item variant="outline" size="sm">
+        <ItemMedia variant="icon">
+          <KeyRoundIcon />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>Add your TypeSafe key</ItemTitle>
+          <ItemDescription>Needed for Meaning search.</ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <Button size="sm" variant="outline" onClick={jev.openKeyDialog}>
+            Add key
+          </Button>
+        </ItemActions>
+      </Item>
     )
   }
 
