@@ -1,4 +1,8 @@
+![JevPDF: ask a PDF in your own words and watch the answer light up](.github/header.png)
+
 # JevPDF
+
+**Live: [jevpdf.fly.dev](https://jevpdf.fly.dev)**
 
 Open a PDF, say what you're looking for, and watch the matching lines light up. It works like Ctrl+F when you don't know the exact words. Extract once, then keep asking. No embeddings, no vector index, no chat answers.
 
@@ -35,6 +39,15 @@ All thresholds, budgets, and the question wording live in `src/lib/jev-config.ts
 - A running search is cancelled when the query or mode changes.
 - Exponential backoff with jitter on 429/529/5xx, honouring `Retry-After`.
 - The API key stays on the server: `/api/jev` is a Vite middleware (`server/typesafe-proxy.ts`, for both `dev` and `preview`) that adds the Bearer header. `.env.local` is gitignored.
+
+## Deploy (Fly.io)
+
+`server/index.ts` is a small Bun server that serves `dist/` and the `/api/jev` proxy, which uses the same forwarding code as dev (`server/jev-upstream.ts`). Because the live proxy spends real credits, it only accepts same-origin POSTs from the app, pins the model, caps request size, and rate-limits each IP.
+
+```sh
+fly secrets import < .env.local   # TYPESAFE_API_KEY
+fly deploy
+```
 
 ## Sample
 
