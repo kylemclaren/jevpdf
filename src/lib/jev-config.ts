@@ -24,8 +24,12 @@ export const BATCH_STATE_TOKEN_BUDGET = 6_000
 /** Max span questions per request; all share one state and run in parallel. */
 export const MAX_QUESTIONS_PER_BATCH = 16
 
-/** Requests in flight at once (rate limit is 1,200 req/min). */
-export const MAX_CONCURRENT_REQUESTS = 6
+/**
+ * Requests in flight at once. TypeSafe allows 1,200 req/min (20/s) and a
+ * batch takes ~0.6-1s, so 16 keeps a 150-page PDF near half a minute while
+ * leaving headroom; 429s still back off.
+ */
+export const MAX_CONCURRENT_REQUESTS = 16
 
 /** Backoff for 429 / 529 / network blips. */
 export const RETRY_MAX_ATTEMPTS = 6

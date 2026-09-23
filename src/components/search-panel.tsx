@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { BorderBeam } from "border-beam"
-import { Orbit } from "loading-dev"
+import { Ring } from "loading-dev"
 import {
   ArrowRightIcon,
   ArrowUpRightIcon,
@@ -516,7 +516,7 @@ function Line({
 }) {
   return (
     <div className="flex min-h-5 items-center gap-2 text-sm text-muted-foreground">
-      {spinner && <Orbit size={16} className="shrink-0 text-foreground" />}
+      {spinner && <Ring size={16} className="shrink-0 text-foreground" />}
       <span>{children}</span>
     </div>
   )

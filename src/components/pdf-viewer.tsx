@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/TextLayer.css"
 import type { PDFDocumentProxy } from "pdfjs-dist"
-import { Orbit } from "loading-dev"
+import { Ring } from "loading-dev"
 import { cn } from "@/lib/utils"
 
 import type { Extraction, PageText, Result } from "@/lib/types"
@@ -156,7 +156,7 @@ const PdfPage = memo(function PdfPage({
           pageNumber={page.page}
           width={width}
           renderAnnotationLayer={false}
-          loading={<Centered><Orbit size={18} /></Centered>}
+          loading={<Centered><Ring size={18} /></Centered>}
         />
       ) : null}
 
