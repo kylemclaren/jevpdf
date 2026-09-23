@@ -34,7 +34,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemMedia,
   ItemTitle,
 } from "@/components/ui/item"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -549,9 +548,6 @@ function Status({ jev }: { jev: Jev }) {
   } else if (phase.kind === "ready" && mode === "meaning" && jev.needsKey) {
     content = (
       <Item variant="outline" size="sm">
-        <ItemMedia variant="icon">
-          <KeyRoundIcon />
-        </ItemMedia>
         <ItemContent>
           <ItemTitle>Add your TypeSafe key</ItemTitle>
           <ItemDescription>Needed for Meaning search.</ItemDescription>
