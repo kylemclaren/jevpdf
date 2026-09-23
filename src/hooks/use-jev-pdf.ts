@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import { useApiKey } from "@/lib/api-key"
 import { sha256 } from "@/lib/cache"
 import { exactSearch } from "@/lib/exact"
 import { extractDocument } from "@/lib/extract"
-import { candidateCount, runMeaningSearch, type Nouls } from "@/lib/jev"
+import {
+  candidateCount,
+  JevFatalError,
+  runMeaningSearch,
+  type Nouls,
+} from "@/lib/jev"
 import { meaningResults, nearMisses } from "@/lib/results"
 import type { Extraction, Result, SearchMode } from "@/lib/types"
 
@@ -25,6 +31,8 @@ export type MeaningRun = {
   failedBatches: number
   retrying: boolean
   error?: string
+  /** Set when a TypeSafe key would fix the error (missing or rejected). */
+  needsKey?: boolean
   /** Summed over this run's TypeSafe requests (0 requests = all cached). */
   usage: { requests: number; inputTokens: number }
 }
@@ -45,6 +53,19 @@ export function useJevPdf() {
 
   const abortRef = useRef<AbortController | null>(null)
   const userPickedRef = useRef(false)
+
+  // Bring-your-own-key: does the server have a key to fall back on?
+  const apiKey = useApiKey()
+  const [serverKey, setServerKey] = useState<boolean | null>(null)
+  const [keyDialogOpen, setKeyDialogOpen] = useState(false)
+  const pendingQueryRef = useRef<string | null>(null)
+  useEffect(() => {
+    fetch("/api/jev/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => setServerKey(Boolean(c?.serverKey)))
+      .catch(() => setServerKey(false))
+  }, [])
+  const needsKey = serverKey === false && !apiKey
 
   const stopMeaning = useCallback(() => {
     abortRef.current?.abort()
@@ -118,6 +139,12 @@ export function useJevPdf() {
     async (q: string) => {
       const text = q.trim()
       if (!extraction || !text) return
+      if (needsKey) {
+        // Ask for a key first; the question runs as soon as one is saved.
+        pendingQueryRef.current = q
+        setKeyDialogOpen(true)
+        return
+      }
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
@@ -186,12 +213,20 @@ export function useJevPdf() {
         }))
       } catch (err) {
         if (controller.signal.aborted) return
+        const keyProblem =
+          err instanceof JevFatalError &&
+          (err.code === "missing_key" || err.code === "bad_key")
         live((r) => ({
           ...r,
           status: "error",
           retrying: false,
           error: err instanceof Error ? err.message : String(err),
+          needsKey: keyProblem,
         }))
+        if (keyProblem) {
+          pendingQueryRef.current = q
+          setKeyDialogOpen(true)
+        }
       } finally {
         if (abortRef.current === controller) {
           abortRef.current = null
@@ -199,10 +234,26 @@ export function useJevPdf() {
         }
       }
     },
-    [extraction]
+    [extraction, needsKey]
   )
 
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  const openKeyDialog = useCallback(() => setKeyDialogOpen(true), [])
+  /** Closing without saving drops the waiting question, so a rejected key
+   *  isn't retried as-is. */
+  const closeKeyDialog = useCallback((saved: boolean) => {
+    if (!saved) pendingQueryRef.current = null
+    setKeyDialogOpen(false)
+  }, [])
+
+  // A key was just saved: run the question that was waiting for it.
+  useEffect(() => {
+    const pending = pendingQueryRef.current
+    if (!apiKey || !pending || keyDialogOpen) return
+    pendingQueryRef.current = null
+    void searchMeaning(pending)
+  }, [apiKey, keyDialogOpen, searchMeaning])
 
   const setMode = useCallback(
     (m: SearchMode) => {
@@ -308,5 +359,11 @@ export function useJevPdf() {
     select,
     step,
     submit,
+    apiKey,
+    serverKey,
+    needsKey,
+    keyDialogOpen,
+    openKeyDialog,
+    closeKeyDialog,
   }
 }

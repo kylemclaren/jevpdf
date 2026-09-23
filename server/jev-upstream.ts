@@ -4,6 +4,11 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 
 export const UPSTREAM = "https://api.typesafe.ai/v1/systemone"
 export const ROUTE = "/api/jev"
+/** GET: tells the app whether this server has its own key to fall back on. */
+export const CONFIG_ROUTE = "/api/jev/config"
+/** The user's own TypeSafe key, when they bring one. Never stored or logged. */
+export const KEY_HEADER = "x-typesafe-key"
+const KEY_PATTERN = /^apikey_[A-Za-z0-9]+_[A-Za-z0-9]+$/
 export const MAX_BODY_BYTES = 1_000_000
 /** The only model the app uses; the proxy pins it so it can't be swapped. */
 export const MODEL = "jev-latest"
@@ -52,6 +57,28 @@ export async function forwardToJev(
   const retryAfter = upstream.headers.get("retry-after")
   if (retryAfter) headers["Retry-After"] = retryAfter
   return { status: upstream.status, headers, body: await upstream.text() }
+}
+
+/**
+ * The key to use for a request: the user's own (from KEY_HEADER) when sent,
+ * else the server's. A malformed user key is rejected rather than silently
+ * falling back, so the user finds out.
+ */
+export function resolveApiKey(
+  req: IncomingMessage,
+  serverKey: string | undefined
+): { key: string | undefined } | { error: UpstreamResult } {
+  const raw = req.headers[KEY_HEADER]
+  const userKey = (Array.isArray(raw) ? raw[0] : raw)?.trim()
+  if (!userKey) return { key: serverKey }
+  if (userKey.length > 256 || !KEY_PATTERN.test(userKey)) {
+    return { error: json(400, { error: "invalid_api_key" }) }
+  }
+  return { key: userKey }
+}
+
+export function configResponse(serverKey: string | undefined): UpstreamResult {
+  return json(200, { serverKey: Boolean(serverKey) })
 }
 
 export function json(status: number, body: unknown): UpstreamResult {

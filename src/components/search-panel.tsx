@@ -5,6 +5,7 @@ import {
   ArrowRightIcon,
   ArrowUpRightIcon,
   FileUpIcon,
+  KeyRoundIcon,
   MonitorIcon,
   MoonIcon,
   PencilIcon,
@@ -16,6 +17,7 @@ import {
   XIcon,
 } from "lucide-react"
 
+import { ApiKeyDialog } from "@/components/api-key-dialog"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +31,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { useJevPdf } from "@/hooks/use-jev-pdf"
+import { maskApiKey } from "@/lib/api-key"
 import { INPUT_TOKEN_PRICE_USD, NEAR_MISS_FLOOR } from "@/lib/jev-config"
 import { SAMPLE_FILE_NAME, SAMPLE_QUERIES } from "@/lib/sample"
 import type { Result } from "@/lib/types"
@@ -295,7 +298,13 @@ export function SearchPanel({
         </p>
       )}
 
-      <Footer run={run} />
+      <Footer jev={jev} />
+      <ApiKeyDialog
+        open={jev.keyDialogOpen}
+        currentKey={jev.apiKey}
+        serverKey={jev.serverKey}
+        onClose={jev.closeKeyDialog}
+      />
     </aside>
   )
 }
@@ -327,13 +336,14 @@ function ThemeToggle() {
 }
 
 /** Theme, what the current search cost, and the repo link. */
-function Footer({ run }: { run: Jev["run"] }) {
+function Footer({ jev }: { jev: Jev }) {
+  const { run } = jev
   const u = run?.usage
   const cost = u ? u.inputTokens * INPUT_TOKEN_PRICE_USD : 0
   const fromCache = run?.status === "done" && u?.requests === 0
 
   return (
-    <footer className="grid grid-cols-[2rem_1fr_2rem] items-center border-t px-2 py-1.5">
+    <footer className="grid grid-cols-[4rem_1fr_4rem] items-center border-t px-2 py-1.5">
       <ThemeToggle />
       <div className="text-center text-xs text-muted-foreground tabular-nums">
         {u ? (
@@ -365,16 +375,35 @@ function Footer({ run }: { run: Jev["run"] }) {
           </a>
         )}
       </div>
-      <a
-        href="https://github.com/kylemclaren/jevpdf"
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Source on GitHub"
-        title="kylemclaren/jevpdf on GitHub"
-        className="inline-flex size-7 items-center justify-center justify-self-end rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-      >
-        <GitHubMark className="size-3.5" />
-      </a>
+      <div className="flex items-center justify-self-end">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="relative text-muted-foreground"
+          aria-label={jev.apiKey ? "Your TypeSafe API key (set)" : "Add your TypeSafe API key"}
+          title={
+            jev.apiKey
+              ? `Using your TypeSafe key ${maskApiKey(jev.apiKey)}`
+              : "Add your TypeSafe API key"
+          }
+          onClick={jev.openKeyDialog}
+        >
+          <KeyRoundIcon />
+          {jev.apiKey && (
+            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-emerald-500" />
+          )}
+        </Button>
+        <a
+          href="https://github.com/kylemclaren/jevpdf"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Source on GitHub"
+          title="kylemclaren/jevpdf on GitHub"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <GitHubMark className="size-3.5" />
+        </a>
+      </div>
     </footer>
   )
 }
@@ -495,8 +524,27 @@ function Status({ jev }: { jev: Jev }) {
     } else if (run.status === "stopped") {
       content = <Line>Stopped · {matches} so far</Line>
     } else {
-      content = <p className="text-sm text-destructive">{run.error}</p>
+      content = (
+        <p className="text-sm text-destructive">
+          {run.error}
+          {run.needsKey && (
+            <>
+              {" "}
+              <KeyLink onClick={jev.openKeyDialog}>
+                {jev.apiKey ? "Update key" : "Add key"}
+              </KeyLink>
+            </>
+          )}
+        </p>
+      )
     }
+  } else if (phase.kind === "ready" && mode === "meaning" && jev.needsKey) {
+    content = (
+      <Line>
+        Meaning search uses your TypeSafe API key.{" "}
+        <KeyLink onClick={jev.openKeyDialog}>Add key</KeyLink>
+      </Line>
+    )
   }
 
   if (!content) return null
@@ -504,6 +552,24 @@ function Status({ jev }: { jev: Jev }) {
     <div className="px-5 pb-3" aria-live="polite">
       {content}
     </div>
+  )
+}
+
+function KeyLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+    >
+      {children}
+    </button>
   )
 }
 

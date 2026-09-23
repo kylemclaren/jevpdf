@@ -1,3 +1,4 @@
+import { getApiKey } from "@/lib/api-key"
 import { cacheGet, cacheSet } from "@/lib/cache"
 import { EXTRACTION_VERSION } from "@/lib/extract"
 import {
@@ -29,7 +30,14 @@ export type Batch = {
 
 export type Nouls = Record<string, number>
 
-export class JevFatalError extends Error {}
+/** A failure no retry can fix; `code` tells the UI whether a key would help. */
+export class JevFatalError extends Error {
+  readonly code: "missing_key" | "bad_key" | "other"
+  constructor(message: string, code: JevFatalError["code"] = "other") {
+    super(message)
+    this.code = code
+  }
+}
 
 /** Spans worth asking about: skip page numbers, lone symbols, etc. */
 export function isCandidate(span: Span) {
@@ -193,15 +201,13 @@ async function askBatch(
   onRetry?: (status: number, delayMs: number) => void
 ): Promise<NoulResponse> {
   const body = JSON.stringify(buildRequest(batch, query))
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const userKey = getApiKey()
+  if (userKey) headers["X-TypeSafe-Key"] = userKey
   for (let attempt = 0; ; attempt++) {
     let res: Response | null = null
     try {
-      res = await fetch("/api/jev", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal,
-      })
+      res = await fetch("/api/jev", { method: "POST", headers, body, signal })
     } catch (err) {
       // TypeError = network failure: retry like a 5xx. Aborts propagate.
       if (signal.aborted || !(err instanceof TypeError)) throw err
@@ -213,11 +219,20 @@ async function askBatch(
       const text = await res.text()
       if (status === 503 && text.includes("missing_api_key")) {
         throw new JevFatalError(
-          "No TypeSafe key on the server. Add TYPESAFE_API_KEY to .env.local and restart."
+          "Add your TypeSafe API key to search by meaning.",
+          "missing_key"
         )
       }
+      if (status === 400 && text.includes("invalid_api_key")) {
+        throw new JevFatalError("That doesn't look like a TypeSafe API key.", "bad_key")
+      }
       if (status === 401) {
-        throw new JevFatalError("TypeSafe rejected the API key (401).")
+        throw new JevFatalError(
+          userKey
+            ? "TypeSafe rejected your API key. Check it and try again."
+            : "TypeSafe rejected the server's API key.",
+          userKey ? "bad_key" : "other"
+        )
       }
       if (![429, 529, 500, 502, 503, 504].includes(status)) {
         throw new Error(`TypeSafe ${status}: ${text.slice(0, 200)}`)

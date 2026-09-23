@@ -1,7 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import type { Connect, Plugin } from "vite"
 
-import { forwardToJev, json, readBody, ROUTE, send } from "./jev-upstream.ts"
+import {
+  CONFIG_ROUTE,
+  configResponse,
+  forwardToJev,
+  json,
+  readBody,
+  resolveApiKey,
+  ROUTE,
+  send,
+} from "./jev-upstream.ts"
 
 /**
  * Keeps TYPESAFE_API_KEY server-side during `vite dev` / `vite preview`.
@@ -11,7 +20,9 @@ import { forwardToJev, json, readBody, ROUTE, send } from "./jev-upstream.ts"
  */
 export function typesafeProxy(apiKey: string | undefined): Plugin {
   const handler: Connect.NextHandleFunction = (req, res, next) => {
-    if (req.url?.split("?")[0] !== ROUTE) return next()
+    const path = req.url?.split("?")[0]
+    if (path === CONFIG_ROUTE) return send(res, configResponse(apiKey))
+    if (path !== ROUTE) return next()
     void handle(req, res, apiKey)
   }
   return {
@@ -27,6 +38,8 @@ async function handle(
   apiKey: string | undefined
 ) {
   if (req.method !== "POST") return send(res, json(405, { error: "method_not_allowed" }))
+  const resolved = resolveApiKey(req, apiKey)
+  if ("error" in resolved) return send(res, resolved.error)
 
   let body: string
   try {
@@ -41,7 +54,7 @@ async function handle(
   })
 
   try {
-    send(res, await forwardToJev(body, apiKey, controller.signal))
+    send(res, await forwardToJev(body, resolved.key, controller.signal))
   } catch (err) {
     if (controller.signal.aborted) return
     send(res, json(502, { error: "upstream_unreachable", detail: String(err) }))

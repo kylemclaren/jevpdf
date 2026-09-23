@@ -9,7 +9,16 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile, stat } from "node:fs/promises"
 import { extname, join, normalize } from "node:path"
 
-import { forwardToJev, json, readBody, ROUTE, send } from "./jev-upstream.ts"
+import {
+  CONFIG_ROUTE,
+  configResponse,
+  forwardToJev,
+  json,
+  readBody,
+  resolveApiKey,
+  ROUTE,
+  send,
+} from "./jev-upstream.ts"
 
 const PORT = Number(process.env.PORT ?? 8080)
 const API_KEY = process.env.TYPESAFE_API_KEY
@@ -35,23 +44,55 @@ const MIME: Record<string, string> = {
   ".bcmap": "application/octet-stream",
 }
 
+/**
+ * Users may keep their TypeSafe key in this origin's storage, so only our
+ * own scripts may run: no third-party or inline script, no framing. pdf.js
+ * needs blob:/data: for fonts and images and wasm for some image decoders.
+ */
+const SECURITY_HEADERS = {
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "worker-src 'self' blob:",
+    "connect-src 'self' blob: data:",
+    "img-src 'self' data: blob:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+  "Referrer-Policy": "no-referrer",
+  "X-Frame-Options": "DENY",
+}
+
 const hits = new Map<string, { count: number; reset: number }>()
 
 createServer((req, res) => {
   const path = (req.url ?? "/").split("?")[0]
   const done =
-    path === ROUTE ? handleJev(req, res) : handleStatic(path, req, res)
+    path === CONFIG_ROUTE
+      ? Promise.resolve(send(res, configResponse(API_KEY)))
+      : path === ROUTE
+        ? handleJev(req, res)
+        : handleStatic(path, req, res)
   done.catch((err) => {
     console.error(err)
     if (!res.headersSent) send(res, json(500, { error: "internal" }))
   })
 }).listen(PORT, "0.0.0.0", () => {
-  console.log(`jevpdf listening on :${PORT}${API_KEY ? "" : " (no TYPESAFE_API_KEY!)"}`)
+  console.log(
+    `jevpdf listening on :${PORT}` +
+      (API_KEY ? "" : " (no server key: users bring their own TypeSafe key)")
+  )
 })
 
 async function handleJev(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== "POST") return send(res, json(405, { error: "method_not_allowed" }))
   if (!sameOrigin(req)) return send(res, json(403, { error: "forbidden" }))
+  const resolved = resolveApiKey(req, API_KEY)
+  if ("error" in resolved) return send(res, resolved.error)
   if (!allow(clientIp(req))) {
     return send(res, {
       ...json(429, { error: "rate_limited" }),
@@ -71,7 +112,7 @@ async function handleJev(req: IncomingMessage, res: ServerResponse) {
     if (!res.writableEnded) controller.abort()
   })
   try {
-    send(res, await forwardToJev(body, API_KEY, controller.signal))
+    send(res, await forwardToJev(body, resolved.key, controller.signal))
   } catch (err) {
     if (controller.signal.aborted) return
     send(res, json(502, { error: "upstream_unreachable", detail: String(err) }))
@@ -96,6 +137,7 @@ async function handleStatic(path: string, req: IncomingMessage, res: ServerRespo
       ? "public, max-age=31536000, immutable"
       : "no-cache",
     "X-Content-Type-Options": "nosniff",
+    ...SECURITY_HEADERS,
   })
   res.end(req.method === "HEAD" ? undefined : data)
 }
