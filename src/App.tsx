@@ -3,7 +3,6 @@ import {
   ArrowLeftIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  FileTextIcon,
 } from "lucide-react"
 
 import { PdfViewer } from "@/components/pdf-viewer"
@@ -189,9 +188,14 @@ function EmptyState({
       )}
     >
       {!compact && (
-        <div className="flex h-40 w-32 items-center justify-center rounded-sm bg-white shadow-[0_1px_2px_oklch(0_0_0/0.06),0_12px_32px_-16px_oklch(0_0_0/0.25)]">
-          <FileTextIcon className="size-8 text-muted-foreground/60" />
-        </div>
+        <img
+          src="/document.png"
+          alt=""
+          width={143}
+          height={180}
+          className="doc-art select-none"
+          draggable={false}
+        />
       )}
       <div className="max-w-sm">
         <p className="font-heading text-2xl tracking-tight">Open a PDF, then ask.</p>
