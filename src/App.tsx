@@ -188,14 +188,24 @@ function EmptyState({
       )}
     >
       {!compact && (
-        <img
-          src="/document.png"
-          alt=""
-          width={143}
-          height={180}
-          className="doc-art select-none"
-          draggable={false}
-        />
+        <>
+          <img
+            src="/document.png"
+            alt=""
+            width={143}
+            height={180}
+            className="doc-art select-none dark:hidden"
+            draggable={false}
+          />
+          <img
+            src="/document-dark.png"
+            alt=""
+            width={143}
+            height={180}
+            className="hidden select-none dark:block"
+            draggable={false}
+          />
+        </>
       )}
       <div className="max-w-sm">
         <p className="font-heading text-2xl tracking-tight">Open a PDF, then ask.</p>

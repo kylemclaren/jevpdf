@@ -160,12 +160,7 @@
   .jev-mark, .jev-mark[data-active="true"] { animation: none; }
 }
 
-/* Empty-state document art: soft drop shadow on paper; in dark mode a faint
-   light rim so its black pixel outline doesn't vanish into the background. */
+/* Empty-state document art (light theme): paper resting on the desk. */
 .doc-art {
   filter: drop-shadow(0 12px 24px oklch(0 0 0 / 0.18));
-}
-.dark .doc-art {
-  filter: drop-shadow(0 0 1px oklch(1 0 0 / 0.55))
-    drop-shadow(0 0 18px oklch(1 0 0 / 0.07));
 }
