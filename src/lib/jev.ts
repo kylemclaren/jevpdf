@@ -1,4 +1,5 @@
 import { cacheGet, cacheSet } from "@/lib/cache"
+import { EXTRACTION_VERSION } from "@/lib/extract"
 import {
   BATCH_STATE_TOKEN_BUDGET,
   CHARS_PER_TOKEN,
@@ -127,7 +128,7 @@ export type JevEvents = {
 
 function cacheKey(hash: string, query: string) {
   const q = query.trim().toLowerCase().replace(/\s+/g, " ")
-  return `jev:${hash}:${JEV_MODEL}:q${QUESTION_VERSION}:${q}`
+  return `jev:${hash}:x${EXTRACTION_VERSION}:${JEV_MODEL}:q${QUESTION_VERSION}:${q}`
 }
 
 /**

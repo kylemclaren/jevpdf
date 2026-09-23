@@ -4,8 +4,11 @@ import type { TextItem } from "pdfjs-dist/types/src/display/api"
 import { cacheGet, cacheSet } from "@/lib/cache"
 import type { Extraction, PageText, Rect, Segment, Span } from "@/lib/types"
 
-/** Bump when the extraction shape or line-grouping rules change. */
-const EXTRACTION_VERSION = 2
+/**
+ * Bump when the extraction shape or line-grouping rules change. Span ids
+ * depend on it, so the Jev answer cache is keyed by it too.
+ */
+export const EXTRACTION_VERSION = 3
 
 type Placed = {
   text: string
@@ -55,6 +58,10 @@ async function extractPage(
   const placed: Placed[] = []
   for (const item of content.items) {
     if (!("str" in item) || item.str.length === 0) continue
+    // Skip rotated runs (e.g. arXiv's vertical margin stamp): they'd merge
+    // into whatever horizontal line shares their baseline.
+    const [a, b] = item.transform as number[]
+    if (Math.abs(b) > Math.abs(a) * 0.2) continue
     const rect = itemRect(item, viewport)
     if (rect) {
       const font = content.styles[item.fontName]?.fontFamily
